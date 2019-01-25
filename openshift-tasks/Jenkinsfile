@@ -82,13 +82,9 @@ podTemplate(
         echo "Building OpenShift container image tasks:${devTag}"
 
         // Build Image, tag Image
-	//sh "oc start-build tasks --follow --from-file=http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases/${groupId.replaceAll('\\.', '/')}/$artifactId/$version/${artifactId}-${version}.war -n ${GUID}-tasks-dev"
+	sh "oc start-build tasks --follow --from-file=http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases/org/jboss/quickstarts/eap/${artifactId}/${version}/${artifactId}-${version}.war -n ${GUID}-tasks-dev"
 
-        //openshiftTag alias: 'false', destStream: 'tasks', destTag: devTag, destinationNamespace: '${GUID}-tasks-dev', namespace: '${GUID}-tasks-dev', srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
-script {
-      openshift.withCluster() {
-        openshift.withProject("${devProject}") {
-          openshift.selector("bc", "tasks").startBuild("--from-file=./target/openshift-tasks.war", "--wait=true")
+        openshiftTag alias: 'false', destStream: 'tasks', destTag: devTag, destinationNamespace: '${GUID}-tasks-dev', namespace: '${GUID}-tasks-dev', srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
 
       }
 
