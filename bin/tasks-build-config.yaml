@@ -1,0 +1,34 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: openshift-tasks-template
+objects:
+  - kind: BuildConfig
+    apiVersion: build.openshift.io/v1
+    metadata:
+      name: tasks-pipeline
+    spec:
+      source:
+        git:
+          uri: ${REPO}
+        contextDir: openshift-tasks
+      strategy:
+        jenkinsPipelineStrategy:
+          env:
+          - name: GUID
+            value: ${GUID}
+          - name: REPO
+            value: ${REPO}
+          - name: CLUSTER
+            value: ${CLUSTER}
+        type: JenkinsPipeline
+parameters:
+  - description: The GUID of the Homework lab.
+    name: GUID
+    required: true
+  - description: The git repository of the homework
+    name: REPO
+    required: true
+  - description: The Openshift cluster URL
+    name: CLUSTER
+    required: true
