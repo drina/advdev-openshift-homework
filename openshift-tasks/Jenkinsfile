@@ -16,7 +16,7 @@ podTemplate(
 ) {
   node('skopeo-pod') {
     // Maven Command to point to the correct settings for our Nexus installation
-    def mvnCmd = "mvn -s ../nexus_settings.xml"
+    def mavenCommand = "mvn -s ../nexus_settings.xml"
 
     // Checkout Source Code.
     stage('Checkout Source') {
@@ -34,9 +34,12 @@ podTemplate(
       def artifactId = getArtifactIdFromPom("pom.xml")
 
       // Set the tag for the development image: version + build number
-      def devTag  = version + "-" + currentBuild.number
+      def devTag  = "${version}-${BUILD_NUMBER}"
+      echo "devTag: ${devTag}"
       // Set the tag for the production image: version
-      def prodTag = version
+      def prodTag = "${version}"
+      echo "prodTag: ${prodTag}"
+
 
       // Using Maven build the war file
       // Do not run tests in this step
@@ -44,7 +47,7 @@ podTemplate(
         echo "Building version ${version}"
 
         // Execute Maven Build
-	sh "$mavenCommand package -DskipTests=true"
+	sh "${mavenCommand} clean package -DskipTests=true"
       }
 
   
@@ -52,7 +55,7 @@ podTemplate(
       stage('Unit Tests') {
         echo "Running Unit Tests"
 
-         sh "$mavenCommand test"
+         sh "${mavenCommand} test"
       }
 
       // Using Maven to call SonarQube for Code Analysis
@@ -60,7 +63,7 @@ podTemplate(
         echo "Running Code Analysis"
 
         // Execute Sonarqube Tests
-	sh "$mavenCommand sonar:sonar \
+	sh "${mavenCommand} sonar:sonar \
 			 -Dsonar.host.url=http://sonarqube.gpte-hw-cicd.svc.cluster.local:9000/ \
 			 -Dsonar.projectName=${JOB_BASE_NAME}-${devTag}"
       }
@@ -70,7 +73,7 @@ podTemplate(
         echo "Publish to Nexus"
 
         // Publish to Nexus
-	sh "$mavenCommand deploy -DskipTests=true \
+	sh "${mavenCommand} deploy -DskipTests=true \
 				 -DaltDeploymentRepository=nexus::default::http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases"
       }
 
@@ -79,13 +82,14 @@ podTemplate(
         echo "Building OpenShift container image tasks:${devTag}"
 
         // Build Image, tag Image
-	sh "oc start-build tasks --follow \
-				 --from-file=http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases/${groupId.replaceAll('\\.', '/')}/$artifactId/$version/${artifactId}-${version}.war -n ${GUID}-tasks-dev"
+	//sh "oc start-build tasks --follow --from-file=http://nexus3.gpte-hw-cicd.svc.cluster.local:8081/repository/releases/${groupId.replaceAll('\\.', '/')}/$artifactId/$version/${artifactId}-${version}.war -n ${GUID}-tasks-dev"
 
-        openshiftTag alias: 'false', 
-	        destStream: 'tasks', destTag: devTag, 
-      destinationNamespace: '${GUID}-tasks-dev', 
-                 namespace: '${GUID}-tasks-dev', srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
+        //openshiftTag alias: 'false', destStream: 'tasks', destTag: devTag, destinationNamespace: '${GUID}-tasks-dev', namespace: '${GUID}-tasks-dev', srcStream: 'tasks', srcTag: 'latest', verbose: 'false'
+script {
+      openshift.withCluster() {
+        openshift.withProject("${devProject}") {
+          openshift.selector("bc", "tasks").startBuild("--from-file=./target/openshift-tasks.war", "--wait=true")
+
       }
 
       // Deploy the built image to the Development Environment.
@@ -170,10 +174,10 @@ def getVersionFromPom(pom) {
   matcher ? matcher[0][1] : null
 }
 def getGroupIdFromPom(pom) {
-    def matcher = readFile(pom) =~ '<groupId>(.+)</groupId>'
-    matcher ? matcher[0][1] : null
+  def matcher = readFile(pom) =~ '<groupId>(.+)</groupId>'
+  matcher ? matcher[0][1] : null
 }
 def getArtifactIdFromPom(pom) {
-    def matcher = readFile(pom) =~ '<artifactId>(.+)</artifactId>'
-    matcher ? matcher[0][1] : null
+  def matcher = readFile(pom) =~ '<artifactId>(.+)</artifactId>'
+  matcher ? matcher[0][1] : null
 }
