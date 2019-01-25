@@ -29,8 +29,7 @@ oc new-build  -D $'FROM docker.io/openshift/jenkins-agent-maven-35-centos7:v3.11
 oc process -f ${0%/*}/tasks-build-config.yaml \
 	   -p REPO=${REPO} \
 	   -p GUID=${GUID} \
-	   -p CLUSTER=${CLUSTER} \ 
-	   -n ${GUID}-jenkins|oc create -f - -n ${GUID}-jenkins
+	   -p CLUSTER=${CLUSTER} -n ${GUID}-jenkins|oc create -f - -n ${GUID}-jenkins
 
 # Make sure that Jenkins is fully up and running before proceeding!
 while : ; do
